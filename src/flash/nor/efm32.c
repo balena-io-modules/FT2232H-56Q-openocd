@@ -48,6 +48,8 @@
 #define EFM_FAMILY_ID_HAPPY_GECKO	77
 #define EZR_FAMILY_ID_WONDER_GECKO		120
 #define EZR_FAMILY_ID_LEOPARD_GECKO		121
+#define EFR_FAMILY_ID_MIGHTY_GECKO         16
+#define EFR_FAMILY_ID_BLUE_GECKO         20
 
 #define EFM32_FLASH_ERASE_TMO           100
 #define EFM32_FLASH_WDATAREADY_TMO      100
@@ -70,7 +72,7 @@
 #define EFM32_MSC_DI_PART_FAMILY        (EFM32_MSC_DEV_INFO+0x1fe)
 #define EFM32_MSC_DI_PROD_REV           (EFM32_MSC_DEV_INFO+0x1ff)
 
-#define EFM32_MSC_REGBASE               0x400c0000
+#define EFM32_MSC_REGBASE               0x400e0000
 #define EFM32_MSC_WRITECTRL             (EFM32_MSC_REGBASE+0x008)
 #define EFM32_MSC_WRITECTRL_WREN_MASK   0x1
 #define EFM32_MSC_WRITECMD              (EFM32_MSC_REGBASE+0x00c)
@@ -86,7 +88,7 @@
 #define EFM32_MSC_STATUS_WDATAREADY_MASK 0x8
 #define EFM32_MSC_STATUS_WORDTIMEOUT_MASK 0x10
 #define EFM32_MSC_STATUS_ERASEABORTED_MASK 0x20
-#define EFM32_MSC_LOCK                  (EFM32_MSC_REGBASE+0x03c)
+#define EFM32_MSC_LOCK                  (EFM32_MSC_REGBASE+0x040)
 #define EFM32_MSC_LOCK_LOCKKEY          0x1b71
 
 struct efm32x_flash_bank {
@@ -206,7 +208,9 @@ static int efm32x_read_info(struct flash_bank *bank,
 		}
 	} else if (EFM_FAMILY_ID_WONDER_GECKO == efm32_info->part_family ||
 			EZR_FAMILY_ID_WONDER_GECKO == efm32_info->part_family ||
-			EZR_FAMILY_ID_LEOPARD_GECKO == efm32_info->part_family) {
+			EZR_FAMILY_ID_LEOPARD_GECKO == efm32_info->part_family ||
+			EFR_FAMILY_ID_BLUE_GECKO == efm32_info->part_family ||
+			EFR_FAMILY_ID_MIGHTY_GECKO == efm32_info->part_family) {
 		uint8_t pg_size = 0;
 		ret = target_read_u8(bank->target, EFM32_MSC_DI_PAGE_SIZE,
 			&pg_size);
@@ -237,6 +241,10 @@ static int efm32x_decode_info(struct efm32_info *info, char *buf, int buf_size)
 		case EZR_FAMILY_ID_WONDER_GECKO:
 		case EZR_FAMILY_ID_LEOPARD_GECKO:
 			printed = snprintf(buf, buf_size, "EZR32 ");
+			break;
+		case EFR_FAMILY_ID_MIGHTY_GECKO:
+		case EFR_FAMILY_ID_BLUE_GECKO:
+			printed = snprintf(buf, buf_size, "EFR32 ");
 			break;
 		default:
 			printed = snprintf(buf, buf_size, "EFM32 ");
@@ -271,6 +279,12 @@ static int efm32x_decode_info(struct efm32_info *info, char *buf, int buf_size)
 			break;
 		case EFM_FAMILY_ID_HAPPY_GECKO:
 			printed = snprintf(buf, buf_size, "Happy Gecko");
+			break;
+		case EFR_FAMILY_ID_BLUE_GECKO:
+			printed = snprintf(buf, buf_size, "Blue Gecko");
+			break;
+		case EFR_FAMILY_ID_MIGHTY_GECKO:
+			printed = snprintf(buf, buf_size, "Mighty Gecko");
 			break;
 	}
 
@@ -456,10 +470,10 @@ static int efm32x_read_lock_data(struct flash_bank *bank)
 	uint32_t *ptr = NULL;
 	int ret = 0;
 
-	assert(bank->num_sectors > 0);
+	assert(!(bank->num_sectors & 0x1f));
 
-	/* calculate the number of 32-bit words to read (one lock bit per sector) */
-	data_size = (bank->num_sectors + 31) / 32;
+	data_size = bank->num_sectors / 8; /* number of data bytes */
+	data_size /= 4; /* ...and data dwords */
 
 	ptr = efm32x_info->lb_page;
 
