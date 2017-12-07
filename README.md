@@ -7,7 +7,7 @@ git clone https://github.com/resin-io-modules/FT2232H-56Q-openocd.git
 ### STEP 1 - Program FTDI
 
 ```bash
-apt-get install ftdi_eeprom
+apt-get install ftdi-eeprom
 modprobe -r ftdi_sio
 ftdi_eeprom --flash-eeprom FT2232H-56Q-openocd/other/jtag.conf
 ```
